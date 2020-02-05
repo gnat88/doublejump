@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/edwingeng/doublejump"
+	"github.com/gnat88/doublejump"
 	"github.com/serialx/hashring"
 )
 
