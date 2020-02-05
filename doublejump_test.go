@@ -14,9 +14,9 @@ import (
 var debugMode = flag.Bool("debug", false, "enable the debug mode")
 
 func always(h *Hash, t *testing.T) {
-	if len(h.loose.a) != len(h.loose.m)+len(h.loose.f) {
-		t.Fatalf("len(h.loose.a) != len(h.loose.m) + len(h.loose.f). len(a): %d, len(m): %d, len(f): %d",
-			len(h.loose.a), len(h.loose.m), len(h.loose.f))
+	if len(h.loose.a) != len(h.loose.m)+len(h.loose.emptyPoses) {
+		t.Fatalf("len(h.loose.a) != len(h.loose.m) + len(h.loose.emptyPoses). len(a): %d, len(m): %d, len(f): %d",
+			len(h.loose.a), len(h.loose.m), len(h.loose.emptyPoses))
 	}
 	if len(h.compact.a) != len(h.compact.m) {
 		t.Fatalf("len(h.compact.a) != len(h.compact.m). len(a): %d, len(m): %d",
@@ -29,8 +29,8 @@ func always(h *Hash, t *testing.T) {
 			n1++
 		}
 	}
-	if n1 != len(h.loose.f) {
-		t.Fatalf("n1 != len(h.loose.f). n1: %d, len(f): %d", n1, len(h.loose.f))
+	if n1 != len(h.loose.emptyPoses) {
+		t.Fatalf("n1 != len(h.loose.emptyPoses). n1: %d, len(f): %d", n1, len(h.loose.emptyPoses))
 	}
 
 	m1 := make(map[interface{}]int)
@@ -227,7 +227,7 @@ func balance(total uint64, h *Hash, t *testing.T) float64 {
 		maxErr = math.Max(maxErr, e)
 		if e > 0.15 {
 			t.Fatalf("not balance. len: %d, len(f): %d, avg: %.1f, e: %.2f, obj: %c, c: %d",
-				h.Len(), len(h.loose.f), avg, e, obj, c)
+				h.Len(), len(h.loose.emptyPoses), avg, e, obj, c)
 			break
 		}
 	}

@@ -7,10 +7,12 @@ import (
 	"github.com/dgryski/go-jump"
 )
 
+// 保持全量的节点信息，删除节点的时候不会从数组中直接删除，需要保留位置，将该位置对应的节点设置为nil
+// 增加节点的时候优先往空位置中填放
 type looseHolder struct {
 	a []interface{}
 	m map[interface{}]int
-	f []int
+	emptyPoses []int
 }
 
 func (this *looseHolder) add(obj interface{}) {
@@ -18,25 +20,28 @@ func (this *looseHolder) add(obj interface{}) {
 		return
 	}
 
-	if nf := len(this.f); nf == 0 {
+	if nf := len(this.emptyPoses); nf == 0 {
 		this.a = append(this.a, obj)
 		this.m[obj] = len(this.a) - 1
 	} else {
-		idx := this.f[nf-1]
-		this.f = this.f[:nf-1]
+		idx := this.emptyPoses[nf-1]
+		this.emptyPoses = this.emptyPoses[:nf-1] // 取出最后一个空位置，用于存放新节点
 		this.a[idx] = obj
 		this.m[obj] = idx
 	}
 }
 
+// 删除节点: 标记删除节点的位置为空
 func (this *looseHolder) remove(obj interface{}) {
 	if idx, ok := this.m[obj]; ok {
-		this.f = append(this.f, idx)
+		this.emptyPoses = append(this.emptyPoses, idx)
 		this.a[idx] = nil
 		delete(this.m, obj)
 	}
 }
 
+// 根据KEY计算一致性哈希值
+// 由于哈希桶的数量取的是全量的数据，所以如果哈希到已经删除的节点，会返回空
 func (this *looseHolder) get(key uint64) interface{} {
 	na := len(this.a)
 	if na == 0 {
@@ -48,7 +53,7 @@ func (this *looseHolder) get(key uint64) interface{} {
 }
 
 func (this *looseHolder) shrink() {
-	if len(this.f) == 0 {
+	if len(this.emptyPoses) == 0 {
 		return
 	}
 
@@ -60,9 +65,11 @@ func (this *looseHolder) shrink() {
 		}
 	}
 	this.a = a
-	this.f = nil
+	this.emptyPoses = nil
 }
 
+// 作为looseHolder的"候补"，保存着当前有效的节点信息，不存在空位置
+// 当looseHolder哈希出来的值是已经删除的节点，就需要通过compactHolder重新计算一次
 type compactHolder struct {
 	a []interface{}
 	m map[interface{}]int
@@ -84,6 +91,7 @@ func (this *compactHolder) shrink(a []interface{}) {
 	}
 }
 
+// 删除节点后，将当前最后的节点放到空位置中, 然后再将数组长度缩减1位
 func (this *compactHolder) remove(obj interface{}) {
 	if idx, ok := this.m[obj]; ok {
 		n := len(this.a)
@@ -101,6 +109,7 @@ func (this *compactHolder) get(key uint64) interface{} {
 		return nil
 	}
 
+	// 这里大概是将KEY变换一下？
 	h := jump.Hash(key*0xc6a4a7935bd1e995, na)
 	return this.a[h]
 }
